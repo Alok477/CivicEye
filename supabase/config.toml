@@ -1,0 +1,17 @@
+[functions.analyze-complaint]
+verify_jwt = false
+
+[auth.email]
+enable_confirmations = false
+
+[functions.submit-complaint]
+verify_jwt = false
+
+[functions.update-status]
+verify_jwt = false
+
+[functions.nearby-duplicates]
+verify_jwt = false
+
+[functions.daily-summary]
+verify_jwt = false

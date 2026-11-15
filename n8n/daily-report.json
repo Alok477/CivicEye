@@ -1,0 +1,115 @@
+{
+  "name": "CivicEye Daily Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "days", "triggerAtHour": 8 }] }
+      },
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Every Morning 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "k1", "name": "supabase_url", "value": "https://REPLACE_WITH_PROJECT_REF.supabase.co", "type": "string" },
+            { "id": "k2", "name": "gemini_model", "value": "REPLACE_WITH_GEMINI_MODEL_ID", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000002",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.supabase_url }}/rest/v1/complaints?select=id,category,severity,status,address,safety_risk,created_at,is_demo&order=created_at.desc&limit=1000",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000003",
+      "name": "Fetch Complaints",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "alwaysOutputData": true,
+      "credentials": { "supabaseApi": { "id": "REPLACE_ME", "name": "Supabase account" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r && r.id);\nconst now = Date.now();\nconst tally = (arr, fn) => arr.reduce((acc, r) => { const k = fn(r) || 'Unknown'; acc[k] = (acc[k] || 0) + 1; return acc; }, {});\nconst open = rows.filter(r => !['RESOLVED', 'REJECTED', 'DUPLICATE'].includes(r.status));\nconst area = r => String(r.address || 'Unknown area').split(',')[0].trim() || 'Unknown area';\nconst topAreas = Object.entries(tally(open, area)).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count }));\nconst age = r => now - new Date(r.created_at).getTime();\nconst stats = {\n  total_complaints: rows.length,\n  new_last_24h: rows.filter(r => age(r) <= 864e5).length,\n  new_last_7d: rows.filter(r => age(r) <= 6048e5).length,\n  open_complaints: open.length,\n  open_critical: open.filter(r => r.severity === 'Critical').length,\n  open_with_safety_risk: open.filter(r => r.safety_risk).length,\n  by_status: tally(rows, r => r.status),\n  by_severity: tally(rows, r => r.severity),\n  by_category: tally(rows, r => r.category),\n  top_open_areas: topAreas,\n  includes_demo_rows: rows.filter(r => r.is_demo).length\n};\nconst system = 'You write a short operational briefing (3 to 5 plain sentences, no markdown, no bullet points) for a city administrator, based ONLY on the JSON statistics provided. Use only the numbers given. Do not invent causes, trends, comparisons, locations or recommendations that the data does not support. If a count is zero, say so. If includes_demo_rows is greater than 0, mention that some records are demo data.';\nreturn [{ json: { stats, gemini_body: { system_instruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: 'Statistics (JSON): ' + JSON.stringify(stats) }] }], generationConfig: { temperature: 0.2 } } } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000004",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $('Config').first().json.gemini_model }}:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.gemini_body) }}",
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000005",
+      "name": "Gemini Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_ME", "name": "Gemini API Key" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst parts = (res.candidates && res.candidates[0] && res.candidates[0].content && res.candidates[0].content.parts) || [];\nconst summary = parts.map(p => p.text || '').join('').trim();\nif (!summary) throw new Error('Gemini returned no summary text');\nreturn [{ json: { summary, stats: $('Aggregate').first().json.stats } }];"
+      },
+      "id": "c1000000-0000-4000-8000-000000000006",
+      "name": "Extract Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.supabase_url }}/rest/v1/daily_summaries",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Prefer", "value": "return=minimal" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: $json.summary, stats: $json.stats, source: 'n8n' }) }}",
+        "options": {}
+      },
+      "id": "c1000000-0000-4000-8000-000000000007",
+      "name": "Store Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 300],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ME", "name": "Supabase account" } }
+    }
+  ],
+  "connections": {
+    "Every Morning 8:00": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "Fetch Complaints", "type": "main", "index": 0 }]] },
+    "Fetch Complaints": { "main": [[{ "node": "Aggregate", "type": "main", "index": 0 }]] },
+    "Aggregate": { "main": [[{ "node": "Gemini Summary", "type": "main", "index": 0 }]] },
+    "Gemini Summary": { "main": [[{ "node": "Extract Summary", "type": "main", "index": 0 }]] },
+    "Extract Summary": { "main": [[{ "node": "Store Summary", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": []
+}

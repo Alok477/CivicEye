@@ -1,0 +1,328 @@
+{
+  "name": "CivicEye Events (new-complaint, status-change, high-priority-alert)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1. new-complaint\nEvent `complaint.submitted`.\nCritical/High go to the **high-priority-alert** branch (citizen notification + optional Telegram).\nThe DB trigger already writes the 'Complaint received' notification.",
+        "height": 200,
+        "width": 420,
+        "color": 4
+      },
+      "id": "b1000000-0000-4000-8000-000000000101",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [880, 60]
+    },
+    {
+      "parameters": {
+        "content": "## 3. high-priority-alert\nWrites an extra notification for the citizen and sends a Telegram alert.\nTelegram nodes are **disabled** by default. See n8n/README.md to switch them on.",
+        "height": 180,
+        "width": 420,
+        "color": 3
+      },
+      "id": "b1000000-0000-4000-8000-000000000102",
+      "name": "Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1340, 60]
+    },
+    {
+      "parameters": {
+        "content": "## 2. status-change\nEvent `complaint.status_changed`.\nBuilds a short message from a template, optionally posts to Telegram, and on RESOLVED adds a follow-up notification.\nThe DB trigger already writes the standard status notification.",
+        "height": 200,
+        "width": 420,
+        "color": 5
+      },
+      "id": "b1000000-0000-4000-8000-000000000103",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [880, 640]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "civiceye-7f3a9c2e",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "7f3a9c2e-0000-4000-8000-0000000000a1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body ?? item;\nconst events = ['complaint.submitted', 'complaint.status_changed'];\nlet error = null;\nif (!body || typeof body !== 'object') error = 'Body must be a JSON object';\nelse if (!events.includes(body.event)) error = 'Unknown or missing event';\nelse if (!body.complaint || !body.complaint.id) error = 'Missing complaint.id';\nelse if (body.event === 'complaint.status_changed' && !body.new_status) error = 'Missing new_status';\nreturn [{ json: {\n  valid: error === null,\n  error,\n  event: body && body.event,\n  complaint: body && body.complaint,\n  citizen: (body && body.citizen) || {},\n  previous_status: (body && body.previous_status) || null,\n  new_status: (body && body.new_status) || null,\n  remarks: (body && body.remarks) || null\n} }];"
+      },
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: $json.error }) }}",
+        "options": { "responseCode": 400 }
+      },
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Respond 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 520]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "id": "r1",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "complaint.submitted",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "complaint.submitted"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "id": "r2",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "complaint.status_changed",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "complaint.status_changed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Route by Event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "s1",
+              "leftValue": "={{ $json.complaint.severity }}",
+              "rightValue": "Critical",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "id": "s2",
+              "leftValue": "={{ $json.complaint.severity }}",
+              "rightValue": "High",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Critical or High?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [940, 320]
+    },
+    {
+      "parameters": {
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "user_id", "fieldValue": "={{ $json.citizen.id }}" },
+            { "fieldId": "complaint_id", "fieldValue": "={{ $json.complaint.id }}" },
+            { "fieldId": "title", "fieldValue": "Flagged for priority review" },
+            { "fieldId": "message", "fieldValue": "={{ 'Your complaint ' + $json.complaint.complaint_number + ' was assessed as ' + $json.complaint.severity + ' severity and flagged for priority review.' }}" }
+          ]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Notify Citizen (Priority)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1400, 280],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ME", "name": "Supabase account" } }
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ '🚨 ' + $json.complaint.severity + ' priority: ' + $json.complaint.complaint_number + ' | ' + $json.complaint.title + ' | ' + $json.complaint.category + ' | score ' + $json.complaint.priority_score + ' | safety risk: ' + ($json.complaint.safety_risk ? 'yes' : 'no') }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "Telegram Alert (optional)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1400, 440],
+      "disabled": true,
+      "credentials": { "telegramApi": { "id": "REPLACE_ME", "name": "Telegram account" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst c = j.complaint;\nconst labels = { SUBMITTED: 'submitted', UNDER_REVIEW: 'under review', ASSIGNED: 'assigned to a department', IN_PROGRESS: 'being worked on', RESOLVED: 'marked resolved', REJECTED: 'rejected after review', DUPLICATE: 'linked to an existing report of the same issue' };\nconst label = labels[j.new_status] || String(j.new_status).toLowerCase();\nconst message = 'Complaint ' + c.complaint_number + ' is now ' + label + '.' + (j.remarks ? ' Note: ' + j.remarks : '');\nconst telegram_text = '📣 ' + c.complaint_number + ': ' + j.previous_status + ' → ' + j.new_status + (c.department ? ' (' + c.department + ')' : '') + (j.remarks ? ' | Remarks: ' + j.remarks : '');\nreturn [{ json: { ...j, message, telegram_text } }];"
+      },
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "Build Status Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 740]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "w1",
+              "leftValue": "={{ $json.new_status }}",
+              "rightValue": "RESOLVED",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "Was Resolved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1180, 700]
+    },
+    {
+      "parameters": {
+        "tableId": "notifications",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "user_id", "fieldValue": "={{ $json.citizen.id }}" },
+            { "fieldId": "complaint_id", "fieldValue": "={{ $json.complaint.id }}" },
+            { "fieldId": "title", "fieldValue": "Complaint marked resolved" },
+            { "fieldId": "message", "fieldValue": "={{ $json.message + ' If the problem is still there, please submit a new report.' }}" }
+          ]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000012",
+      "name": "Notify Citizen (Resolved)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1440, 660],
+      "credentials": { "supabaseApi": { "id": "REPLACE_ME", "name": "Supabase account" } }
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "b1000000-0000-4000-8000-000000000013",
+      "name": "Telegram Status (optional)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1180, 880],
+      "disabled": true,
+      "credentials": { "telegramApi": { "id": "REPLACE_ME", "name": "Telegram account" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]] },
+    "Validate Payload": { "main": [[{ "node": "Is Valid?", "type": "main", "index": 0 }]] },
+    "Is Valid?": {
+      "main": [
+        [
+          { "node": "Respond 200", "type": "main", "index": 0 },
+          { "node": "Route by Event", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Respond 400", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route by Event": {
+      "main": [
+        [{ "node": "Critical or High?", "type": "main", "index": 0 }],
+        [{ "node": "Build Status Message", "type": "main", "index": 0 }]
+      ]
+    },
+    "Critical or High?": {
+      "main": [
+        [
+          { "node": "Notify Citizen (Priority)", "type": "main", "index": 0 },
+          { "node": "Telegram Alert (optional)", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Status Message": {
+      "main": [
+        [
+          { "node": "Was Resolved?", "type": "main", "index": 0 },
+          { "node": "Telegram Status (optional)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Was Resolved?": {
+      "main": [[{ "node": "Notify Citizen (Resolved)", "type": "main", "index": 0 }], []]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": []
+}

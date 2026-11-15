@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-canvas font-sans text-navy antialiased; }
+  h1, h2, h3, h4 { @apply font-display tracking-[-0.025em]; }
+  ::selection { @apply bg-brand-soft text-navy; }
+  :focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-white; }
+}
+
+@layer components {
+  .skeleton {
+    @apply rounded-lg bg-brand-soft animate-pulse;
+  }
+  .page { @apply mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-10; }
+  .civic-eyebrow { @apply inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-brand; }
+}
+
+/* Leaflet containers need an explicit stacking context under our modals/navbar */
+.leaflet-container { font-family: inherit; z-index: 0; }
+.civic-pin { background: none; border: 0; }
+
+@keyframes civic-rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes civic-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes civic-modal-up {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes civic-route {
+  to { stroke-dashoffset: -44; }
+}
+
+@keyframes civic-pin-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes civic-pin-pulse {
+  0% { opacity: .48; transform: scale(.55); }
+  75%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+.enter-up { animation: civic-rise-in .65s cubic-bezier(.2,.7,.25,1) both; }
+.enter-up-delay { animation-delay: .14s; }
+.modal-backdrop { animation: civic-fade-in .18s ease-out both; }
+.modal-panel { animation: civic-modal-up .22s cubic-bezier(.2,.7,.25,1) both; }
+.map-route { fill: none; stroke: #18785E; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 8 10; animation: civic-route 7s linear infinite; }
+.map-pin-float { transform-box: fill-box; transform-origin: center; animation: civic-pin-float 3.2s ease-in-out infinite; }
+.map-pin-delay { animation-delay: -1.6s; }
+.map-pin-pulse { transform-box: fill-box; transform-origin: center; animation: civic-pin-pulse 2.4s ease-out infinite; }
+.map-pin-pulse-green { animation-delay: 1.2s; }
+.map-note-float { transform-box: fill-box; transform-origin: center; animation: civic-pin-float 4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .enter-up, .modal-backdrop, .modal-panel, .map-route, .map-pin-float, .map-pin-pulse, .map-note-float { animation: none !important; }
+}
