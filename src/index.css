@@ -6,6 +6,8 @@
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
+  html.landing-page { scrollbar-width: none; -ms-overflow-style: none; }
+  html.landing-page::-webkit-scrollbar { display: none; }
   body { @apply bg-canvas font-sans text-navy antialiased; }
   h1, h2, h3, h4 { @apply font-display tracking-[-0.025em]; }
   ::selection { @apply bg-brand-soft text-navy; }

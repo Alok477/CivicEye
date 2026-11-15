@@ -11,11 +11,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
-  ScanEye,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { USE_MOCK } from '../../lib/adminApi'
 import { NotifyProvider } from '../../components/admin/adminUi'
+import BrandLogo from '../../components/BrandLogo'
 
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -28,9 +28,7 @@ function SidebarContent({ collapsed, onNavigate }) {
   return (
     <>
       <div className={`flex items-center gap-3 h-16 px-4 border-b border-white/10 ${collapsed ? 'justify-center' : ''}`}>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand">
-          <ScanEye size={20} aria-hidden="true" />
-        </span>
+        <BrandLogo markOnly alt={collapsed ? 'CivicEye' : ''} className="h-9 shrink-0" />
         {!collapsed && (
           <div className="leading-tight">
             <p className="font-semibold">CivicEye</p>

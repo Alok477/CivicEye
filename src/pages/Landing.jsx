@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 import { DISCLAIMER, TAGLINE } from '../lib/constants'
 import { Button, SeverityBadge } from '../components/ui'
 import CivicIllustration from '../components/CivicIllustration'
+import BrandLogo from '../components/BrandLogo'
 
 const STEPS = [
   { icon: Camera, title: 'Snap or describe', text: 'Take a photo, type a few words or speak. Any one of them is enough to start.' },
@@ -78,11 +79,16 @@ export default function Landing() {
   const stats = useLiveCounts()
   const home = role === 'admin' ? '/admin' : '/dashboard'
 
+  useEffect(() => {
+    document.documentElement.classList.add('landing-page')
+    return () => document.documentElement.classList.remove('landing-page')
+  }, [])
+
   return (
     <div className="min-h-screen bg-canvas">
       <header className="relative z-10 mx-auto flex h-[4.5rem] max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 font-display text-xl font-extrabold">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-sm"><MapPin className="h-4 w-4" aria-hidden="true" /></span>CivicEye
+        <Link to="/" aria-label="CivicEye home" className="flex items-center">
+          <BrandLogo className="h-9" />
         </Link>
         <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
           <Button as={Link} to="/explore" variant="ghost" size="sm" className="hidden sm:inline-flex">Explore map</Button>
@@ -94,8 +100,8 @@ export default function Landing() {
 
       <section className="relative isolate overflow-hidden border-y border-line bg-surface">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-40 -z-10 h-[34rem] w-[34rem] rounded-full bg-brand-soft blur-3xl" />
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[5fr_6fr] lg:py-24">
-        <div className="enter-up">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[5fr_6fr] lg:py-24">
+        <div className="enter-up min-w-0">
           <span className="civic-eyebrow"><MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Your neighborhood, heard</span>
           <h1 className="mt-6 max-w-2xl text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">{TAGLINE}</h1>
           <p className="mt-5 max-w-lg text-lg leading-relaxed text-navy-500">
@@ -108,7 +114,7 @@ export default function Landing() {
           </div>
           <p className="mt-5 flex items-center gap-2 text-sm font-medium text-navy-500"><CheckCircle2 className="h-4 w-4 text-low" aria-hidden="true" /> Your report stays visible from submission to resolution.</p>
         </div>
-        <Preview />
+        <div className="min-w-0"><Preview /></div>
         </div>
       </section>
 
@@ -190,7 +196,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-line bg-surface px-4 py-8 text-center">
-        <p className="font-display font-bold">CivicEye</p>
+        <BrandLogo className="mx-auto h-7" />
         <p className="mx-auto mt-2 max-w-xl text-xs text-navy-500">{DISCLAIMER}</p>
       </footer>
     </div>
