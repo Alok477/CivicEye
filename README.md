@@ -19,6 +19,15 @@ Using AI-powered analysis, CivicEye helps identify, categorize, and prioritize r
 
 Traditional civic complaint systems can be slow, fragmented, and difficult to track. Citizens often struggle to report problems, while authorities face challenges organizing complaints and identifying urgent issues.
 
+## Admin Demo Login
+
+Use the following credentials to access the CivicEye Admin Panel:
+
+- **Email:** admin@gmail.com
+- **Password:** admin1234
+
+> Note: These are demo credentials intended for testing and evaluation purposes.
+
 CivicEye addresses these challenges by combining AI analysis, structured reporting, and workflow automation into a unified platform.
 
 ### Vision
